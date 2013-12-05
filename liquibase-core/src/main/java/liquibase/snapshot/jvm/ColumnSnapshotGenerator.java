@@ -140,9 +140,12 @@ public class ColumnSnapshotGenerator extends JdbcSnapshotGenerator {
                     String selectStatement = "select " + database.escapeColumnName(rawCatalogName, rawSchemaName, rawTableName, rawColumnName) + " from " + database.escapeTableName(rawCatalogName, rawSchemaName, rawTableName) + " where 0=1";
                     LogFactory.getLogger().debug("Checking "+rawTableName+"."+rawCatalogName+" for auto-increment with SQL: '"+selectStatement+"'");
                     Connection underlyingConnection = ((JdbcConnection) database.getConnection()).getUnderlyingConnection();
-                    Statement statement = underlyingConnection.createStatement();
-                    ResultSet columnSelectRS = statement.executeQuery(selectStatement);
+                    Statement statement = null;
+                    ResultSet columnSelectRS = null;
+
                     try {
+                        statement = underlyingConnection.createStatement();
+                        columnSelectRS = statement.executeQuery(selectStatement);
                         if (columnSelectRS.getMetaData().isAutoIncrement(1)) {
                             column.setAutoIncrementInformation(new Column.AutoIncrementInformation());
                         } else {
@@ -150,10 +153,14 @@ public class ColumnSnapshotGenerator extends JdbcSnapshotGenerator {
                         }
                     } finally {
                         try {
-                            statement.close();
+                            if (statement != null) {
+                                statement.close();
+                            }
                         } catch (SQLException ignore) {
                         }
-                        columnSelectRS.close();
+                        if (columnSelectRS != null) {
+                            columnSelectRS.close();
+                        }
                     }
                 }
             }
@@ -304,8 +311,11 @@ public class ColumnSnapshotGenerator extends JdbcSnapshotGenerator {
             } else if (type == Types.DATALINK) {
                 return new DatabaseFunction(stringVal);
             } else if (type == Types.DATE) {
+                if (typeName.equalsIgnoreCase("year")) {
+                    return stringVal.trim();
+                }
                 if (zeroTime(stringVal)) {
-                    return new DatabaseFunction(stringVal);
+                    return stringVal;
                 }
                 return new java.sql.Date(getDateFormat(database).parse(stringVal.trim()).getTime());
             } else if (type == Types.DECIMAL && scanner.hasNextBigDecimal()) {
@@ -352,12 +362,12 @@ public class ColumnSnapshotGenerator extends JdbcSnapshotGenerator {
                 return new DatabaseFunction(stringVal);
             } else if (type == Types.TIME) {
                 if (zeroTime(stringVal)) {
-                    return new DatabaseFunction(stringVal);
+                    return stringVal;
                 }
                 return new java.sql.Time(getTimeFormat(database).parse(stringVal).getTime());
             } else if (type == Types.TIMESTAMP) {
                 if (zeroTime(stringVal)) {
-                    return new DatabaseFunction(stringVal);
+                    return stringVal;
                 }
                 return new Timestamp(getDateTimeFormat(database).parse(stringVal).getTime());
             } else if (type == Types.TINYINT && scanner.hasNextInt()) {
@@ -384,7 +394,7 @@ public class ColumnSnapshotGenerator extends JdbcSnapshotGenerator {
     }
 
     protected DateFormat getTimeFormat(Database database) {
-        return new SimpleDateFormat("HH:mm:SS");
+        return new SimpleDateFormat("HH:mm:ss");
     }
 
     protected DateFormat getDateTimeFormat(Database database) {

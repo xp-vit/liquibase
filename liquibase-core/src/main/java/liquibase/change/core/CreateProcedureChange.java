@@ -29,7 +29,6 @@ public class CreateProcedureChange extends AbstractChange implements DbmsTargete
 	private String dbms;
 
     private String path;
-    private InputStream procedureTextStream;
     private Boolean relativeToChangelogFile;
     private String encoding = null;
 
@@ -130,30 +129,15 @@ public class CreateProcedureChange extends AbstractChange implements DbmsTargete
         return validate;
     }
 
-    public boolean initializeSqlStream() throws IOException {
+    public InputStream openSqlStream() throws IOException {
         if (path == null) {
-            return true;
+            return null;
         }
 
-        procedureTextStream = StreamUtil.openStream(getPath(), isRelativeToChangelogFile(), getChangeSet(), getResourceAccessor());
-        return procedureTextStream != null;
-    }
-
-    @Override
-    public void finishInitialization() throws SetupException {
-        if (getPath() == null) {
-            return;
-        }
-
-        boolean loaded;
         try {
-            loaded = initializeSqlStream();
+            return StreamUtil.openStream(getPath(), isRelativeToChangelogFile(), getChangeSet(), getResourceAccessor());
         } catch (IOException e) {
-            throw new SetupException(e);
-        }
-
-        if (!loaded) {
-            throw new SetupException("<"+ChangeFactory.getInstance().getChangeMetaData(this).getName()+" path=" + path + "> - Could not find file");
+            throw new IOException("<"+ChangeFactory.getInstance().getChangeMetaData(this).getName()+" path=" + path + "> -Unable to read file", e);
         }
     }
 
@@ -164,7 +148,12 @@ public class CreateProcedureChange extends AbstractChange implements DbmsTargete
      */
     @Override
     public CheckSum generateCheckSum() {
-        InputStream stream = this.procedureTextStream;
+        InputStream stream = null;
+        try {
+            stream = openSqlStream();
+        } catch (IOException e) {
+            throw new UnexpectedLiquibaseException(e);
+        }
 
         String procedureText = this.procedureText;
         if (stream == null && procedureText == null) {
@@ -175,17 +164,10 @@ public class CreateProcedureChange extends AbstractChange implements DbmsTargete
             stream = new ByteArrayInputStream(procedureText.getBytes());
         }
 
-        try {
-            CheckSum checkSum = CheckSum.compute(new AbstractSQLChange.NormalizingStream(";", false, false, stream), false);
+        CheckSum checkSum = CheckSum.compute(new AbstractSQLChange.NormalizingStream(";", false, false, stream), false);
 
-            return CheckSum.compute(super.generateCheckSum().toString()+":"+checkSum.toString());
-        } finally {
-            try {
-                initializeSqlStream();
-            } catch (IOException e) {
-                LogFactory.getLogger().severe("Exception re-initializing procedureText", e);
-            }
-        }
+        return CheckSum.compute(super.generateCheckSum().toString()+":"+checkSum.toString());
+
     }
 
     @Override
@@ -203,15 +185,9 @@ public class CreateProcedureChange extends AbstractChange implements DbmsTargete
             procedureText = StringUtils.trimToNull(getProcedureText());
         } else {
             try {
-                procedureText = StreamUtil.getStreamContents(procedureTextStream, encoding);
+                procedureText = StreamUtil.getStreamContents(openSqlStream(), encoding);
             } catch (IOException e) {
                 throw new UnexpectedLiquibaseException(e);
-            } finally {
-                try {
-                    initializeSqlStream();
-                } catch (IOException e) {
-                    LogFactory.getLogger().severe("Error re-initializing sqlStream", e);
-                }
             }
         }
         return generateStatements(procedureText, endDelimiter, database);

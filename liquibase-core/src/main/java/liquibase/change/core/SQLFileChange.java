@@ -1,13 +1,14 @@
 package liquibase.change.core;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 
 import liquibase.change.*;
 import liquibase.database.Database;
 import liquibase.exception.SetupException;
 import liquibase.exception.UnexpectedLiquibaseException;
 import liquibase.exception.ValidationErrors;
+import liquibase.exception.Warnings;
 import liquibase.logging.LogFactory;
 import liquibase.resource.ResourceAccessor;
 import liquibase.util.StreamUtil;
@@ -86,31 +87,18 @@ public class SQLFileChange extends AbstractSQLChange {
         if (path == null) {
             throw new SetupException("<sqlfile> - No path specified");
         }
-        LogFactory.getLogger().debug("SQLFile file:" + path);
-        boolean loaded = false;
-        try {
-            loaded = initializeSqlStream();
-        } catch (IOException e) {
-            throw new SetupException(e);
-        }
-
-        if (!loaded) {
-            throw new SetupException("<sqlfile path=" + path + "> - Could not find file");
-        }
     }
 
-    public boolean initializeSqlStream() throws IOException {
+    public InputStream openSqlStream() throws IOException {
         if (path == null) {
-            return true;
+            return null;
         }
 
         try {
-            sqlStream = StreamUtil.openStream(path, isRelativeToChangelogFile(), getChangeSet(), getResourceAccessor());
+            return StreamUtil.openStream(path, isRelativeToChangelogFile(), getChangeSet(), getResourceAccessor());
         } catch (IOException e) {
             throw new IOException("<sqlfile path=" + path + "> -Unable to read file", e);
         }
-        return sqlStream != null;
-
     }
 
     @Override
@@ -132,19 +120,15 @@ public class SQLFileChange extends AbstractSQLChange {
     public String getSql() {
         String sql = super.getSql();
         if (sql == null) {
-            if (sqlStream == null) {
-                return null;
-            }
+            InputStream sqlStream;
             try {
+                sqlStream = openSqlStream();
+                if (sqlStream == null) {
+                    return null;
+                }
                 return StreamUtil.getStreamContents(sqlStream, encoding);
             } catch (IOException e) {
                 throw new UnexpectedLiquibaseException(e);
-            } finally {
-                try {
-                    initializeSqlStream();
-                } catch (IOException e) {
-                    LogFactory.getLogger().severe("Error re-initializing sqlStream", e);
-                }
             }
         } else {
             return sql;

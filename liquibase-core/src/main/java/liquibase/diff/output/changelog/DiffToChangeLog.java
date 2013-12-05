@@ -41,6 +41,14 @@ public class DiffToChangeLog {
         this.diffOutputControl = diffOutputControl;
     }
 
+    public DiffToChangeLog(DiffOutputControl diffOutputControl) {
+        this.diffOutputControl = diffOutputControl;
+    }
+
+    public void setDiffResult(DiffResult diffResult) {
+        this.diffResult = diffResult;
+    }
+
     public void setChangeSetContext(String changeSetContext) {
         this.changeSetContext = changeSetContext;
     }
@@ -88,11 +96,6 @@ public class DiffToChangeLog {
                     offset += lineSeparator.getBytes().length;
                 }
             }
-            fileReader.close();
-
-            fileReader = new BufferedReader(new FileReader(file));
-            fileReader.skip(offset);
-
             fileReader.close();
 
             // System.out.println("resulting XML: " + xml.trim());
@@ -356,8 +359,19 @@ public class DiffToChangeLog {
 
             @Override
             public boolean equals(Object obj) {
+                if (!(obj instanceof Edge)) {
+                    return false;
+                }
+                if (obj == null) {
+                    return false;
+                }
                 Edge e = (Edge) obj;
                 return e.from == from && e.to == to;
+            }
+
+            @Override
+            public int hashCode() {
+                return (this.from.toString()+"."+this.to.toString()).hashCode();
             }
         }
     }

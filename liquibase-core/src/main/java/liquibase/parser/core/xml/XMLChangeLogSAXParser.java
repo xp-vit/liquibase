@@ -45,7 +45,7 @@ public class XMLChangeLogSAXParser implements ChangeLogParser {
     }
 
     public static String getSchemaVersion() {
-        return "3.0";
+        return "3.1";
     }
 
     @Override
@@ -68,7 +68,7 @@ public class XMLChangeLogSAXParser implements ChangeLogParser {
             }
 
             XMLReader xmlReader = parser.getXMLReader();
-            LiquibaseEntityResolver resolver=new LiquibaseEntityResolver();
+            LiquibaseEntityResolver resolver=new LiquibaseEntityResolver(this);
             resolver.useResoureAccessor(resourceAccessor,FilenameUtils.getFullPath(physicalChangeLogLocation));
             xmlReader.setEntityResolver(resolver);
             xmlReader.setErrorHandler(new ErrorHandler() {
