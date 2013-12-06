@@ -12,6 +12,7 @@ import java.util.*;
 public class DatabaseFactory {
     private static DatabaseFactory instance;
     private Map<String, SortedSet<Database>> implementedDatabases = new HashMap<String, SortedSet<Database>>();
+    private Map<String, SortedSet<Database>> internalDatabases = new HashMap<String, SortedSet<Database>>();
 
     private DatabaseFactory() {
         try {
@@ -57,11 +58,30 @@ public class DatabaseFactory {
         return returnList;
     }
 
-    public void register(Database database) {
-        if (!implementedDatabases.containsKey(database.getShortName())) {
-            implementedDatabases.put(database.getShortName(), new TreeSet<Database>(new TreeSet<Database>(new DatabaseComparator())));
+    /**
+     * Returns instances of all "internal" database types.
+     */
+    public List<Database> getInternalDatabases() {
+        List<Database> returnList = new ArrayList<Database>();
+        for (SortedSet<Database> set : internalDatabases.values()) {
+            returnList.add(set.iterator().next());
         }
-        implementedDatabases.get(database.getShortName()).add(database);
+        return returnList;
+    }
+
+    public void register(Database database) {
+        Map<String, SortedSet<Database>> map = null;
+        if (database instanceof InternalDatabase) {
+            map = internalDatabases;
+        } else {
+            map = implementedDatabases;
+
+        }
+
+        if (!map.containsKey(database.getShortName())) {
+            map.put(database.getShortName(), new TreeSet<Database>(new TreeSet<Database>(new DatabaseComparator())));
+        }
+        map.get(database.getShortName()).add(database);
     }
 
     public Database findCorrectDatabaseImplementation(DatabaseConnection connection) throws DatabaseException {
