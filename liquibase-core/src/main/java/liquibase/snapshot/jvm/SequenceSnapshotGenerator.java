@@ -70,9 +70,7 @@ public class SequenceSnapshotGenerator extends JdbcSnapshotGenerator {
     }
 
     protected String getSelectSequenceSql(Schema schema, Database database) {
-        if (database instanceof DB2iDatabase) {
-            return "SELECT SEQUENCE_NAME FROM QSYS2.SYSSEQUENCES WHERE SEQUENCE_SCHEMA = '" + schema.getCatalogName() + "'";
-        } else if (database instanceof DB2Database) {
+        if (database instanceof DB2Database) {
             return "SELECT SEQNAME AS SEQUENCE_NAME FROM SYSCAT.SEQUENCES WHERE SEQTYPE='S' AND SEQSCHEMA = '" + schema.getCatalogName() + "'";
         } else if (database instanceof DerbyDatabase) {
             return "SELECT " +
@@ -91,8 +89,6 @@ public class SequenceSnapshotGenerator extends JdbcSnapshotGenerator {
             return "SELECT SEQUENCE_NAME FROM INFORMATION_SCHEMA.SYSTEM_SEQUENCES WHERE SEQUENCE_SCHEMA = '" + schema.getName() + "'";
         } else if (database instanceof InformixDatabase) {
             return "SELECT tabname FROM systables t, syssequences s WHERE s.tabid = t.tabid AND t.owner = '" + schema.getName() + "'";
-        } else if (database instanceof MaxDBDatabase) {
-            return "SELECT SEQUENCE_NAME FROM DOMAIN.SEQUENCES WHERE OWNER = '" + schema.getName() + "'";
         } else if (database instanceof OracleDatabase) {
             return "SELECT SEQUENCE_NAME FROM ALL_SEQUENCES WHERE SEQUENCE_OWNER = '" + schema.getCatalogName() + "'";
         } else if (database instanceof PostgresDatabase) {
@@ -104,6 +100,8 @@ public class SequenceSnapshotGenerator extends JdbcSnapshotGenerator {
                     "AND 'nextval(''" + schema.getName() + "." + "\"'||relname||'\"''::regclass)' not in (select adsrc from pg_attrdef where adsrc is not null) " +
                     "AND 'nextval('''||relname||'''::regclass)' not in (select adsrc from pg_attrdef where adsrc is not null)" +
                     "AND 'nextval(''\"'||relname||'\"''::regclass)' not in (select adsrc from pg_attrdef where adsrc is not null)";
+        } else if (database instanceof MSSQLDatabase) {
+                return "SELECT SEQUENCE_NAME FROM INFORMATION_SCHEMA.SEQUENCES WHERE SEQUENCE_SCHEMA = '" + schema.getName() +"'";
         } else {
             throw new UnexpectedLiquibaseException("Don't know how to query for sequences on " + database);
         }

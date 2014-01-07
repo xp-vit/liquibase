@@ -37,4 +37,8 @@ public interface LockService extends PrioritizedService {
      * Clears information the lock handler knows about the tables.  Should only be called by Liquibase internal calls
      */
     void reset();
+
+    void init() throws DatabaseException;
+
+    void destroy() throws DatabaseException;
 }

@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.sql.Connection;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
@@ -310,22 +311,6 @@ public class MockDatabase implements Database, InternalDatabase {
     }
 
     @Override
-    public boolean hasDatabaseChangeLogTable() {
-        return false;
-    }
-
-    @Override
-    public boolean hasDatabaseChangeLogLockTable() {
-        return false;
-    }
-
-    public void checkDatabaseChangeLogTable(final Liquibase liquibase) throws DatabaseException, IOException {
-    }
-
-    public void checkDatabaseChangeLogLockTable(final Liquibase liquibase) throws DatabaseException, IOException {
-    }
-
-    @Override
     public void dropDatabaseObjects(final CatalogAndSchema schema) throws DatabaseException {
     }
 
@@ -435,21 +420,6 @@ public class MockDatabase implements Database, InternalDatabase {
 
     public boolean acquireLock() throws LockException {
         return false;
-    }
-
-    @Override
-    public void checkDatabaseChangeLogTable(final boolean updateExistingNullChecksums, final DatabaseChangeLog databaseChangeLog, final String[] contexts) throws DatabaseException {
-        ;
-    }
-
-    @Override
-	public void checkDatabaseChangeLogTable(final boolean updateExistingNullChecksums, final DatabaseChangeLog databaseChangeLog, final Contexts contexts) throws DatabaseException {
-        ;
-    }
-
-    @Override
-    public void checkDatabaseChangeLogLockTable() throws DatabaseException {
-        ;
     }
 
     @Override
@@ -584,11 +554,6 @@ public class MockDatabase implements Database, InternalDatabase {
     @Override
     public void setLiquibaseTablespaceName(final String tablespaceName) {
 
-    }
-
-    @Override
-    public int getNextChangeSetSequenceValue() throws LiquibaseException {
-        return 1;
     }
 
     @Override
@@ -748,4 +713,9 @@ public class MockDatabase implements Database, InternalDatabase {
 	public String getSystemSchema() {
 		return "information_schema";
 	}
+
+    @Override
+    public void addReservedWords(Collection<String> words) {
+
+    }
 }

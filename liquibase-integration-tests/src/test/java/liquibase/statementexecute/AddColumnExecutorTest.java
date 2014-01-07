@@ -2,13 +2,11 @@ package liquibase.statementexecute;
 
 import liquibase.database.Database;
 import liquibase.database.core.MSSQLDatabase;
-import liquibase.database.core.MaxDBDatabase;
 import liquibase.database.core.MySQLDatabase;
 import liquibase.database.core.PostgresDatabase;
 import liquibase.database.core.SQLiteDatabase;
 import liquibase.database.core.SybaseASADatabase;
 import liquibase.database.core.SybaseDatabase;
-import liquibase.database.core.CacheDatabase;
 import liquibase.database.core.*;
 import liquibase.datatype.DataTypeFactory;
 import liquibase.test.DatabaseTestContext;
@@ -58,7 +56,6 @@ public class AddColumnExecutorTest extends AbstractExecuteTest {
 	@Test
     public void generateSql_notNull() throws Exception {
         this.statementUnderTest = new AddColumnStatement(null, null, "table_name", "column_name", "int", 42, new NotNullConstraint());
-        assertCorrect("alter table [table_name] add [column_name] int not null default 42", CacheDatabase.class, MaxDBDatabase.class);
         assertCorrect("alter table [table_name] add [column_name] int default 42 not null", SybaseASADatabase.class, SybaseDatabase.class);
         assertCorrect("alter table table_name add column_name int not null default 42", PostgresDatabase.class);
         assertCorrect("alter table [table_name] add [column_name] int not null constraint df_table_name_column_name default 42", MSSQLDatabase.class);
@@ -77,7 +74,7 @@ public class AddColumnExecutorTest extends AbstractExecuteTest {
         assertCorrect("alter table [table_name] add [column_name] int constraint df_table_name_column_name default 42", MSSQLDatabase.class);
 //        assertCorrect("alter table [table_name] add [column_name] integer default 42", SQLiteDatabase.class);
         assertCorrect("not supported. fixme!!", SQLiteDatabase.class);
-        assertCorrect("alter table table_name add column_name int default 42", PostgresDatabase.class, InformixDatabase.class, OracleDatabase.class, DerbyDatabase.class, HsqlDatabase.class, DB2Database.class, H2Database.class, CacheDatabase.class, FirebirdDatabase.class, MaxDBDatabase.class);
+        assertCorrect("alter table table_name add column_name int default 42", PostgresDatabase.class, InformixDatabase.class, OracleDatabase.class, DerbyDatabase.class, HsqlDatabase.class, DB2Database.class, H2Database.class, FirebirdDatabase.class);
         assertCorrect("alter table [table_name] add [column_name] int default 42 null", SybaseASADatabase.class);
         assertCorrect("alter table table_name add column_name int null default 42", MySQLDatabase.class);
         assertCorrectOnRest("ALTER TABLE [table_name] ADD [column_name] int DEFAULT 42");
@@ -104,7 +101,7 @@ public class AddColumnExecutorTest extends AbstractExecuteTest {
         assertCorrect("ALTER TABLE [table_name] ADD [column_name] int DEFAULT 42 NOT NULL", SybaseASADatabase.class, SybaseDatabase.class);
         assertCorrect("alter table table_name add column_name int default 42 not null", InformixDatabase.class);
         assertCorrect("alter table [table_name] add [column_name] int not null constraint df_table_name_column_name default 42", MSSQLDatabase.class);
-        assertCorrect("alter table table_name add column_name int default 42 not null", OracleDatabase.class, DerbyDatabase.class, HsqlDatabase.class, DB2Database.class, H2Database.class, FirebirdDatabase.class, DB2iDatabase.class);
+        assertCorrect("alter table table_name add column_name int default 42 not null", OracleDatabase.class, DerbyDatabase.class, HsqlDatabase.class, DB2Database.class, H2Database.class, FirebirdDatabase.class);
         assertCorrect("not supported. fixme!!", SQLiteDatabase.class);
         assertCorrectOnRest("ALTER TABLE [table_name] ADD [column_name] int NOT NULL DEFAULT 42");
     }
@@ -114,7 +111,7 @@ public class AddColumnExecutorTest extends AbstractExecuteTest {
     public void generateSql_primaryKey() throws Exception {
         this.statementUnderTest = new AddColumnStatement(null, "table_name", "column_name", "int", null, new PrimaryKeyConstraint());
 
-        assertCorrect("alter table [table_name] add [column_name] int not null primary key", HsqlDatabase.class, MaxDBDatabase.class);
+        assertCorrect("alter table [table_name] add [column_name] int not null primary key", HsqlDatabase.class);
         assertCorrect("alter table [table_name] add [column_name] int primary key not null", SybaseASADatabase.class, SybaseDatabase.class);
         assertCorrect("alter table [dbo].[table_name] add [column_name] int not null primary key", MSSQLDatabase.class);
         assertCorrect("alter table table_name add column_name int not null primary key", PostgresDatabase.class);
@@ -127,7 +124,7 @@ public class AddColumnExecutorTest extends AbstractExecuteTest {
     public void generateSql_foreignKey() throws Exception {
         this.statementUnderTest = new AddColumnStatement(null, "table_name", "column_name", "int", null, new PrimaryKeyConstraint(), new ForeignKeyConstraint("fk_test_fk", "table_name(column_name)"));
 
-        assertCorrect(new String[] {"alter table [table_name] add [column_name] int not null primary key", "alter table [table_name] add constraint [fk_test_fk] foreign key ([column_name]) references [table_name]([column_name])"}, HsqlDatabase.class, MaxDBDatabase.class);
+        assertCorrect(new String[] {"alter table [table_name] add [column_name] int not null primary key", "alter table [table_name] add constraint [fk_test_fk] foreign key ([column_name]) references [table_name]([column_name])"}, HsqlDatabase.class);
         assertCorrect(new String[] {"alter table [table_name] add [column_name] int primary key not null", "alter table [table_name] add constraint [fk_test_fk] foreign key ([column_name]) references [table_name]([column_name])"}, SybaseASADatabase.class, SybaseDatabase.class);
         assertCorrect(new String[] {"alter table [dbo].[table_name] add [column_name] int not null primary key", "alter table [dbo].[table_name] add constraint [fk_test_fk] foreign key ([column_name]) references [dbo].[table_name]([column_name])"}, MSSQLDatabase.class);
         assertCorrect(new String[] {"alter table table_name add column_name int not null primary key", "alter table [table_name] add constraint [fk_test_fk] foreign key ([column_name]) references [table_name]([column_name])"}, PostgresDatabase.class);

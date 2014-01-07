@@ -17,6 +17,11 @@ public class MockLockService implements LockService {
     }
 
     @Override
+    public void init() throws DatabaseException {
+
+    }
+
+    @Override
     public void setDatabase(Database database) {
     }
 
@@ -62,5 +67,10 @@ public class MockLockService implements LockService {
     @Override
     public int getPriority() {
         return PRIORITY_DATABASE;
+    }
+
+    @Override
+    public void destroy() throws DatabaseException {
+
     }
 }

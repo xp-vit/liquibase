@@ -18,8 +18,10 @@ import liquibase.statement.DatabaseFunction;
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigInteger;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 public interface Database extends PrioritizedService {
 
@@ -139,17 +141,7 @@ public interface Database extends PrioritizedService {
      */
     String getConcatSql(String... values);
 
-    boolean hasDatabaseChangeLogTable() throws DatabaseException;
-
     public void setCanCacheLiquibaseTableInfo(boolean canCacheLiquibaseTableInfo);
-
-    boolean hasDatabaseChangeLogLockTable() throws DatabaseException;
-
-    void checkDatabaseChangeLogTable(boolean updateExistingNullChecksums, DatabaseChangeLog databaseChangeLog, Contexts contexts) throws DatabaseException;
-
-    void checkDatabaseChangeLogTable(boolean updateExistingNullChecksums, DatabaseChangeLog databaseChangeLog, String... contexts) throws DatabaseException;
-
-    void checkDatabaseChangeLogLockTable() throws DatabaseException;
 
     void dropDatabaseObjects(CatalogAndSchema schema) throws LiquibaseException;
 
@@ -261,8 +253,6 @@ public interface Database extends PrioritizedService {
 
     void saveRollbackStatement(Change change, List<SqlVisitor> sqlVisitors, Writer writer) throws IOException, RollbackImpossibleException, StatementNotSupportedOnDatabaseException, LiquibaseException;
 
-    int getNextChangeSetSequenceValue() throws LiquibaseException;
-
     public Date parseDate(String dateAsString) throws DateParseException;
 
     /**
@@ -344,5 +334,7 @@ public interface Database extends PrioritizedService {
     boolean supportsPrimaryKeyNames();
 
     public String getSystemSchema();
+
+    public void addReservedWords(Collection<String> words);
 }
 

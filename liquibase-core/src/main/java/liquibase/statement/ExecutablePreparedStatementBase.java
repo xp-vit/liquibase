@@ -23,11 +23,9 @@ import liquibase.changelog.ChangeSet;
 import liquibase.database.Database;
 import liquibase.database.PreparedStatementFactory;
 import liquibase.exception.DatabaseException;
-import liquibase.resource.ClassLoaderResourceAccessor;
-import liquibase.resource.CompositeResourceAccessor;
-import liquibase.resource.FileSystemResourceAccessor;
 import liquibase.resource.ResourceAccessor;
 import liquibase.resource.UtfBomAwareReader;
+import liquibase.util.JdbcUtils;
 import liquibase.util.StreamUtil;
 import liquibase.util.StringUtils;
 import liquibase.util.file.FilenameUtils;
@@ -42,8 +40,10 @@ public abstract class ExecutablePreparedStatementBase implements ExecutablePrepa
 	private ChangeSet changeSet;
 
 	private Set<Closeable> closeables;
+	
+	private ResourceAccessor resourceAccessor;
 
-	protected ExecutablePreparedStatementBase(Database database, String catalogName, String schemaName, String tableName, List<ColumnConfig> columns, ChangeSet changeSet) {
+	protected ExecutablePreparedStatementBase(Database database, String catalogName, String schemaName, String tableName, List<ColumnConfig> columns, ChangeSet changeSet, ResourceAccessor resourceAccessor) {
 		this.database = database;
 		this.changeSet = changeSet;
 		this.catalogName = catalogName;
@@ -52,6 +52,7 @@ public abstract class ExecutablePreparedStatementBase implements ExecutablePrepa
 		this.columns = columns;
 		this.changeSet = changeSet;
 		this.closeables = new HashSet<Closeable>();
+		this.resourceAccessor = resourceAccessor;
 	}
 
 	@Override
@@ -80,6 +81,7 @@ public abstract class ExecutablePreparedStatementBase implements ExecutablePrepa
 	        for (Closeable closeable : closeables) {
                 StreamUtil.closeQuietly(closeable);
             }
+	        JdbcUtils.closeStatement(stmt);
 	    }
 	}
 
@@ -240,27 +242,17 @@ public abstract class ExecutablePreparedStatementBase implements ExecutablePrepa
 	}
 	
 	private InputStream getResourceAsStream(String valueLobFile) throws IOException {
-		//  The same lookup logic that is in LiquibaseServletListener#executeUpdate()
-		
-		Thread currentThread = Thread.currentThread();
-		ClassLoader contextClassLoader = currentThread.getContextClassLoader();
-		ResourceAccessor threadClFO = new ClassLoaderResourceAccessor(contextClassLoader);
-
-		ResourceAccessor clFO = new ClassLoaderResourceAccessor();
-		ResourceAccessor fsFO = new FileSystemResourceAccessor();
-		
-		ResourceAccessor accessor = new CompositeResourceAccessor(clFO, fsFO, threadClFO);
-		
 		String fileName = getFileName(valueLobFile);
-		
-		InputStream in = accessor.getResourceAsStream(fileName);
+		InputStream in = this.resourceAccessor.getResourceAsStream(fileName);
 		return in;
 	}
 
 	private String getFileName(String fileName) {
 		//  Most of this method were copy-pasted from XMLChangeLogSAXHandler#handleIncludedChangeLog()
 		
-		String relativeBaseFileName = changeSet.getFilePath();
+		String relativeBaseFileName = changeSet.getChangeLog().getPhysicalFilePath();
+		System.out.println("relativeBaseFileName: " + relativeBaseFileName);
+		System.out.println(new File(".").getAbsolutePath());
 		
 		// workaround for FilenameUtils.normalize() returning null for relative paths like ../conf/liquibase.xml
 		String tempFile = FilenameUtils.concat(FilenameUtils.getFullPath(relativeBaseFileName), fileName);
