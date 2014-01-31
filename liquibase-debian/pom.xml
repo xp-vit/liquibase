@@ -3,13 +3,13 @@
     <parent>
         <groupId>org.liquibase</groupId>
         <artifactId>liquibase-parent</artifactId>
-        <version>3.1.0-SNAPSHOT</version>
+        <version>3.2.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>liquibase-debian</artifactId>
     
-    <version>3.1.0-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
     <name>Liquibase Debian Packager</name>
     <description>Debian package builder for liquibase.</description>
      <organization>
@@ -146,16 +146,6 @@
                                         <prefix>/usr/lib/liquibase-${project.version}</prefix>
                                     </mapper>
                                 </data>
-                                <data>
-                                    <src>${project.build.directory}/dist/lib/README.txt</src>
-                                    <type>file</type>
-                                    <mapper>
-                                        <type>perm</type>
-                                        <filemode>444</filemode>
-                                        <prefix>/usr/lib/liquibase-${project.version}/lib</prefix>
-                                    </mapper>
-                                </data>
-			    
                                 <data>
                                     <type>link</type>
                                     <linkName>/usr/bin/liquibase</linkName>
