@@ -8,6 +8,7 @@ import liquibase.sdk.supplier.database.ConnectionSupplier;
 import liquibase.sdk.supplier.database.ConnectionConfigurationFactory;
 import liquibase.util.StringUtils;
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
 import java.io.*;
@@ -34,19 +35,15 @@ public class VagrantControl {
         List<String> commandArgs = commandCommandLine.getArgList();
 
         VagrantInfo vagrantInfo = new VagrantInfo();
-        if (commandArgs.size() == 0) {
-            mainApp.fatal("Missing vagrant command");
+        if (commandArgs.size() < 2) {
+            mainApp.fatal("Usage: liquibase-sdk vagrant BOX_NAME COMMAND");
         }
 
-        if (commandArgs.size() == 1) {
-            mainApp.fatal("Missing vagrant box name");
-        }
+        vagrantInfo.boxName = commandArgs.get(0);
+        String command = commandArgs.get(1);
 
-        String command = commandArgs.get(0);
-
-        vagrantInfo.configName = commandArgs.get(1);
         vagrantInfo.vagrantRoot = new File(mainApp.getSdkRoot(), "vagrant");
-        vagrantInfo.boxDir = new File(vagrantInfo.vagrantRoot, vagrantInfo.configName).getCanonicalFile();
+        vagrantInfo.boxDir = new File(vagrantInfo.vagrantRoot, vagrantInfo.boxName).getCanonicalFile();
 
         if (command.equals("init")) {
             this.init(vagrantInfo, commandCommandLine);
@@ -73,51 +70,73 @@ public class VagrantControl {
 
     public void init(VagrantInfo vagrantInfo, CommandLine commandLine) throws Exception {
 
-        List<String> configs = commandLine.getArgList().subList(2, commandLine.getArgList().size());
-
-        if (configs.size() == 0) {
-            mainApp.fatal("No database configurations specified");
+        if (!commandLine.hasOption("databases")) {
+            mainApp.fatal("vagrant init requires --databases option");
         }
 
+        String[] databaseConfigs = commandLine.getOptionValue("databases").split("\\s*,\\s*");
+
+
         mainApp.out("Vagrant Machine Setup:");
+        mainApp.out(StringUtils.indent("Vagrant Box Name: " + vagrantInfo.boxName));
         mainApp.out(StringUtils.indent("Local Path: " + vagrantInfo.boxDir.getAbsolutePath()));
-        mainApp.out(StringUtils.indent("Config Name: " + vagrantInfo.configName));
-        mainApp.out(StringUtils.indent("Database Config(s): " + StringUtils.join(configs, ", ")));
+        mainApp.out(StringUtils.indent("Database Config(s): " + StringUtils.join(databaseConfigs, ", ")));
 
         Collection<ConnectionSupplier> databases = null;
         try {
-            databases = ConnectionConfigurationFactory.getInstance().findConfigurations(configs);
+            databases = ConnectionConfigurationFactory.getInstance().findConfigurations(databaseConfigs);
         } catch (ConnectionConfigurationFactory.UnknownDatabaseException e) {
             mainApp.fatal(e);
         }
 
         for (ConnectionSupplier connectionConfig : databases) {
-            if (vagrantInfo.boxName == null) {
-                vagrantInfo.boxName = connectionConfig.getVagrantBoxName();
+            if (vagrantInfo.baseBoxName == null) {
+                vagrantInfo.baseBoxName = connectionConfig.getVagrantBaseBoxName();
             } else {
-                if (!vagrantInfo.boxName.equals(connectionConfig.getVagrantBoxName())) {
-                    throw new UnexpectedLiquibaseException("Configuration " + connectionConfig + " needs vagrant box " + connectionConfig.getVagrantBoxName() + ", not " + vagrantInfo.boxName + " like other configurations");
+                if (!vagrantInfo.baseBoxName.equals(connectionConfig.getVagrantBaseBoxName())) {
+                    throw new UnexpectedLiquibaseException("Configuration " + connectionConfig + " needs vagrant box " + connectionConfig.getVagrantBaseBoxName() + ", not " + vagrantInfo.baseBoxName + " like other configurations");
                 }
             }
 
-            if (vagrantInfo.hostName == null) {
-                vagrantInfo.hostName = connectionConfig.getIpAddress();
+            if (vagrantInfo.ipAddress == null) {
+                vagrantInfo.ipAddress = connectionConfig.getIpAddress();
             } else {
-                if (!vagrantInfo.hostName.equals(connectionConfig.getIpAddress())) {
-                    throw new UnexpectedLiquibaseException("Configuration " + connectionConfig + " does not match previously defined hostname " + vagrantInfo.hostName);
+                if (!vagrantInfo.ipAddress.equals(connectionConfig.getIpAddress())) {
+                    throw new UnexpectedLiquibaseException("Configuration " + connectionConfig + " does not match previously defined hostname " + vagrantInfo.ipAddress);
                 }
             }
         }
 
-        mainApp.out(StringUtils.indent("Vagrant Box: " + vagrantInfo.boxName));
-        mainApp.out(StringUtils.indent("Hostname: " + vagrantInfo.hostName));
+        mainApp.out(StringUtils.indent("Vagrant Base Box: " + vagrantInfo.baseBoxName));
+        mainApp.out(StringUtils.indent("IP Address: " + vagrantInfo.ipAddress));
+
+        Properties liquibaseVagrantProperties = new Properties();
+
+        liquibaseVagrantProperties.put("box.ipaddress", vagrantInfo.ipAddress);
+        liquibaseVagrantProperties.put("box.base", vagrantInfo.boxName);
 
         mainApp.out("");
 
+        int i = 0;
         for (ConnectionSupplier config : databases) {
             mainApp.out("Database Configuration For '" + config.toString() + "':");
             mainApp.out(StringUtils.indent(config.getDescription()));
             mainApp.out("");
+
+            addVagrantConfigProperty(i, "supplier", config.toString(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "shortName", config.getDatabaseShortName(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "version", config.getVersion(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "jdbcUrl", config.getJdbcUrl(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "adminUsername", config.getAdminUsername(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "adminPassword", config.getAdminPassword(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "primaryCatalog", config.getPrimaryCatalog(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "primarySchema", config.getPrimarySchema(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "altCatalog", config.getAlternateCatalog(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "altSchema", config.getAlternateSchema(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "username", config.getDatabaseUsername(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "password", config.getDatabasePassword(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "altUsername", config.getAlternateUsername(), liquibaseVagrantProperties);
+            addVagrantConfigProperty(i, "altPassword", config.getAlternateUserPassword(), liquibaseVagrantProperties);
         }
 
         writeVagrantFile(vagrantInfo);
@@ -130,7 +149,7 @@ public class VagrantControl {
             if (databases.size() == 1) {
                 fileName = "liquibase."+vagrantInfo.boxDir.getName()+".properties";
             } else {
-                fileName = "liquibase."+vagrantInfo.boxDir.getName()+"-"+connectionSupplier.getConfigurationName()+".properties";
+                fileName = "liquibase."+vagrantInfo.boxDir.getName()+"-"+connectionSupplier.getDatabaseShortName()+".properties";
             }
 
             String propertiesFile =
@@ -164,14 +183,28 @@ public class VagrantControl {
                 propertiesFiles.add(fileName);
             }
 
+            FileOutputStream vagrantPropertiesStream = new FileOutputStream(new File(vagrantInfo.boxDir, "liquibase.vagrant.properties"));
+            try {
+                liquibaseVagrantProperties.store(vagrantPropertiesStream, "Original configuration for vagrant box "+ vagrantInfo.boxDir.getName());
+            } finally {
+                vagrantPropertiesStream.flush();
+                vagrantPropertiesStream.close();
+            }
+
         }
 
-        mainApp.out("Vagrant Box "+vagrantInfo.configName+" created. To start the box, run 'liquibase-sdk vagrant up "+vagrantInfo.configName+"'");
+        mainApp.out("Vagrant Box "+vagrantInfo.boxName +" created. To start the box, run 'liquibase-sdk vagrant "+vagrantInfo.boxName +"' up");
         if (propertiesFiles.size() > 0) {
             mainApp.out("Created workspace properties file(s): "+StringUtils.join(propertiesFiles, ", "));
         }
         mainApp.out("Make sure any needed JDBC drivers are added to LIQUIBASE_HOME/lib");
-        mainApp.out("NOTE: If you do not already have a vagrant box called "+vagrantInfo.boxName+" installed, run 'vagrant box add "+vagrantInfo.boxName+" VALID_URL'");
+        mainApp.out("NOTE: If you do not already have a vagrant box called "+vagrantInfo.baseBoxName +" installed, run 'vagrant box add "+vagrantInfo.baseBoxName +" VALID_URL'");
+    }
+
+    protected void addVagrantConfigProperty(int index, String name, Object value, Properties properties) {
+        if (value != null) {
+            properties.put("database."+index+"."+name, value);
+        }
     }
 
     public void provision(VagrantInfo vagrantInfo, CommandLine commandLine) {
@@ -204,7 +237,7 @@ public class VagrantControl {
 
     public void up(VagrantInfo vagrantInfo, CommandLine commandLine) {
         mainApp.out("Starting vagrant in " + vagrantInfo.boxDir.getAbsolutePath());
-        mainApp.out("Config Name: " + vagrantInfo.configName);
+        mainApp.out("Config Name: " + vagrantInfo.boxName);
         mainApp.divider();
 
         runVagrant(vagrantInfo, "up");
@@ -267,7 +300,7 @@ public class VagrantControl {
         Set<String> modules = new HashSet<String>();
 
         for (ConnectionSupplier config : databases) {
-            forges.addAll(config.getPuppetForges(vagrantInfo.configName));
+            forges.addAll(config.getPuppetForges(vagrantInfo.boxName));
             modules.addAll(config.getPuppetModules());
         }
 
@@ -285,7 +318,7 @@ public class VagrantControl {
         Set<String> puppetBlocks = new HashSet<String>();
 
         for (ConnectionSupplier config : databases) {
-            String thisInit = config.getPuppetInit(vagrantInfo.configName);
+            String thisInit = config.getPuppetInit(vagrantInfo.boxName);
             if (thisInit != null) {
                 puppetBlocks.add(thisInit);
             }
@@ -295,7 +328,7 @@ public class VagrantControl {
         context.put("puppetBlocks", puppetBlocks);
 
         String osLevelConfig;
-        if (vagrantInfo.boxName.contains("linux")) {
+        if (vagrantInfo.baseBoxName.contains("linux")) {
             osLevelConfig = "service { \"iptables\":\n" +
                     "  ensure => \"stopped\",\n" +
                     "}\n\n";
@@ -304,7 +337,7 @@ public class VagrantControl {
             requiredPackages.add("unzip");
 
             for (ConnectionSupplier config : databases) {
-                requiredPackages.addAll(config.getRequiredPackages(vagrantInfo.configName));
+                requiredPackages.addAll(config.getRequiredPackages(vagrantInfo.boxName));
             }
 
             for (String requiredPackage : requiredPackages) {
@@ -313,7 +346,10 @@ public class VagrantControl {
                         "}\n\n";
             }
         } else {
-            osLevelConfig = "";
+            osLevelConfig = "package { '7zip':\n" +
+                    "    ensure  => '9.20',\n" +
+                    "    source\t=>\t\"http://downloads.sourceforge.net/sevenzip/7z920-x64.msi\",\n" +
+                    "}\n";
         }
         context.put("osLevelConfig", osLevelConfig);
 
@@ -347,13 +383,13 @@ public class VagrantControl {
     private void writeVagrantFile(VagrantInfo vagrantInfo) throws Exception {
 
         Map<String, Object> context = new HashMap<String, Object>();
-        context.put("configVmBox", vagrantInfo.boxName);
-        context.put("configVmNetworkIp", vagrantInfo.hostName);
+        context.put("configVmBox", vagrantInfo.baseBoxName);
+        context.put("configVmNetworkIp", vagrantInfo.ipAddress);
         context.put("vmCustomizeMemory", "8192");
 
         String shellScript;
         String osLevelConfig;
-        if (vagrantInfo.boxName.contains("windows")) {
+        if (vagrantInfo.baseBoxName.contains("windows")) {
             osLevelConfig = "config.vm.guest = :windows\n"
                     + "config.vm.network :forwarded_port, guest: 3389, host: 3389, id: \"rdp\"\n"
                     + "config.vm.network :forwarded_port, guest: 5985, host: 5985, id: \"winrm\", auto_correct: true\n"
@@ -379,14 +415,15 @@ public class VagrantControl {
     }
 
     public Options getOptions() {
-        return new Options();
+        Option databases = new Option("databases", true, "Database configurations");
+        return new Options().addOption(databases);
     }
 
     private static final class VagrantInfo {
-        public String configName;
+        public String boxName;
         private File vagrantRoot;
-        private String boxName;
         private File boxDir;
-        private String hostName;
+        private String baseBoxName;
+        private String ipAddress;
     }
 }

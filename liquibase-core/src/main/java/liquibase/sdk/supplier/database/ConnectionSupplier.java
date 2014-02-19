@@ -81,7 +81,7 @@ public abstract class ConnectionSupplier implements Cloneable {
         return forges;
     }
 
-    public String getVagrantBoxName() {
+    public String getVagrantBaseBoxName() {
         return VAGRANT_BOX_NAME_LINUX_STANDARD;
     }
 
@@ -96,6 +96,20 @@ public abstract class ConnectionSupplier implements Cloneable {
     public String getVersion() {
         return version;
     }
+
+    public String getShortVersion() {
+        if (getVersion() == null) {
+            return "LATEST";
+        }
+        String[] split = getVersion().split("\\.");
+        if (split.length == 1) {
+            return split[0];
+        } else {
+            return split[0]+"."+split[1];
+        }
+    }
+
+
 
     public void setVersion(String version) {
         this.version = version;

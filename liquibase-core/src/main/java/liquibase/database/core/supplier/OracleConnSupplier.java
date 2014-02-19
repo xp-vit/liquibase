@@ -35,7 +35,7 @@ public class OracleConnSupplier extends ConnectionSupplier {
     }
 
     @Override
-    public String getVagrantBoxName() {
+    public String getVagrantBaseBoxName() {
         return "linux.centos.6_4";
     }
 
@@ -150,10 +150,6 @@ public class OracleConnSupplier extends ConnectionSupplier {
     @Override
     public String getVersion() {
         return "12.1.0.1";
-    }
-
-    protected String getShortVersion() {
-        return "12.1";
     }
 
     public String getMemoryTotal() {
