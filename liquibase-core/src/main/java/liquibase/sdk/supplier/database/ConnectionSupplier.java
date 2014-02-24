@@ -1,13 +1,19 @@
 package liquibase.sdk.supplier.database;
 
+import liquibase.database.DatabaseFactory;
+import liquibase.sdk.TemplateService;
+import org.apache.velocity.Template;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public abstract class ConnectionSupplier implements Cloneable {
 
     public static final String CONFIG_NAME_STANDARD = "standard";
+    public static final String CONFIG_NAME_WINDOWS = "windows";
 
     public String VAGRANT_BOX_NAME_WINDOWS_STANDARD = "liquibase.windows.2008r2.x64";
     public String VAGRANT_BOX_NAME_LINUX_STANDARD = "liquibase.linux.centos.x64";
@@ -21,45 +27,45 @@ public abstract class ConnectionSupplier implements Cloneable {
     public abstract String getJdbcUrl();
 
     public String getPrimaryCatalog() {
-        return "liquibase";
+        return "lbcat";
     }
 
     public String getPrimarySchema() {
-        return "liquibase";
+        return "lbschema";
     }
 
     public String getDatabaseUsername() {
-        return "liquibase";
+        return "lbuser";
     }
 
     public String getDatabasePassword() {
-        return "liquibase";
+        return "lbuser";
     }
 
     public String getAlternateUsername() {
-        return "liquibaseb";
+        return "lbuser2";
     }
 
     public String getAlternateUserPassword() {
-        return "liquibase";
+        return "lbuser2";
     }
 
     public String getAlternateCatalog() {
-        return "liquibaseb";
+        return "lbcat2";
     }
 
     public String getAlternateSchema() {
-        return "liquibaseb";
+        return "lbschema2";
     }
 
     public String getAlternateTablespace() {
-        return "liquibase2";
+        return "lbtbsp2";
     }
 
     public abstract String getAdminUsername();
 
     public String getAdminPassword() {
-        return "liquibase";
+        return "lbadmin";
     }
 
     public String getIpAddress() {
@@ -82,6 +88,9 @@ public abstract class ConnectionSupplier implements Cloneable {
     }
 
     public String getVagrantBaseBoxName() {
+        if (getConfigurationName().equals("windows")) {
+            return VAGRANT_BOX_NAME_WINDOWS_STANDARD;
+        }
         return VAGRANT_BOX_NAME_LINUX_STANDARD;
     }
 
@@ -89,9 +98,7 @@ public abstract class ConnectionSupplier implements Cloneable {
         return new HashSet<String>();
     }
 
-    public String getPuppetInit(String box) throws IOException {
-        return null;
-    }
+    public abstract ConfigTemplate getPuppetTemplate(Map<String, Object> context);
 
     public String getVersion() {
         return version;
@@ -140,7 +147,41 @@ public abstract class ConnectionSupplier implements Cloneable {
                 "Alternate Tablespace: "+ getAlternateTablespace()+"\n";
     }
 
-    public void writeConfigFiles(File configDir) throws IOException {
+    public Set<ConfigTemplate> generateConfigFiles(Map<String, Object> context) throws IOException {
+        Set<ConfigTemplate> set = new HashSet<ConfigTemplate>();
+        return set;
+    }
 
+    public static class ConfigTemplate {
+
+        private final String templatePath;
+        private final Map<String, Object> context;
+        private final String outputFileName;
+
+        public ConfigTemplate(String templatePath, Map<String, Object> context) {
+            this.templatePath = templatePath;
+            this.context = context;
+            this.outputFileName = templatePath.replaceFirst(".*/", "").replaceFirst("\\.vm$", "");
+        }
+
+        public String getTemplatePath() {
+            return templatePath;
+        }
+
+        public Map<String, Object> getContext() {
+            return context;
+        }
+
+        public String getOutputFileName() {
+            return outputFileName;
+        }
+
+        public void write(File outputFile) throws IOException {
+            TemplateService.getInstance().write(templatePath, outputFile, context);
+        }
+
+        public String output() throws IOException {
+            return TemplateService.getInstance().output(templatePath, context);
+        }
     }
 }

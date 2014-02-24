@@ -1,11 +1,8 @@
 package liquibase.database.core.supplier;
 
-import liquibase.sdk.TemplateService;
 import liquibase.sdk.supplier.database.ConnectionSupplier;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,7 +24,7 @@ public class PostgresqlConnSupplier extends ConnectionSupplier {
 
     @Override
     public String getJdbcUrl() {
-        return "jdbc:postgresql://"+ getIpAddress() +"/liquibase";
+        return "jdbc:postgresql://"+ getIpAddress() +"/"+getPrimaryCatalog();
     }
 
     @Override
@@ -38,38 +35,19 @@ public class PostgresqlConnSupplier extends ConnectionSupplier {
     }
 
     @Override
-    public String getPuppetInit(String box) throws IOException {
-        Map<String, Object> context = new HashMap<String, Object>();
-        context.put("supplier", this);
-        return TemplateService.getInstance().output("liquibase/sdk/vagrant/supplier/postgresql/postgresql-linux.puppet.vm", context);
+    public ConfigTemplate getPuppetTemplate(Map<String, Object> context) {
+        return new ConfigTemplate("liquibase/sdk/vagrant/supplier/postgresql/postgresql-linux.puppet.vm", context);
     }
 
 
     @Override
-    public void writeConfigFiles(File configDir) throws IOException {
-        super.writeConfigFiles(configDir);
+    public Set<ConfigTemplate> generateConfigFiles(Map<String, Object> context) throws IOException {
+        Set<ConfigTemplate> configTemplates = super.generateConfigFiles(context);
 
-        Map<String, Object> context = new HashMap<String, Object>();
-        context.put("supplier", this);
+        configTemplates.add(new ConfigTemplate("liquibase/sdk/vagrant/supplier/postgresql/postgresql.init.sql.vm", context));
+        configTemplates.add(new ConfigTemplate("liquibase/sdk/vagrant/supplier/postgresql/postgresql.conf.vm", context));
+        configTemplates.add(new ConfigTemplate("liquibase/sdk/vagrant/supplier/postgresql/pg_hba.conf.vm", context));
 
-        TemplateService.getInstance().write("liquibase/sdk/vagrant/supplier/postgresql/postgresql.init.sql.vm", new File(configDir, "postgresql.init.sql"), context);
-        TemplateService.getInstance().write("liquibase/sdk/vagrant/supplier/postgresql/postgresql.conf.vm", new File(configDir, "postgresql.conf"), context);
-        TemplateService.getInstance().write("liquibase/sdk/vagrant/supplier/postgresql/pg_hba.conf.vm", new File(configDir, "pg_hba.conf"), context);
+        return configTemplates;
     }
-
-//    @Override
-//    public String getPuppetInit(String box) throws IOException {
-//        return "class { '::postgresql::server':\n" +
-//                "    ip_mask_deny_postgres_user => '0.0.0.0/32',\n" +
-//                "    ip_mask_allow_all_users    => '0.0.0.0/0',\n" +
-//                "    listen_addresses           => '*',\n" +
-//                "    ipv4acls                   => ['host all liquibase 0.0.0.0/0 password'],\n" +
-//                "    postgres_password          => 'postgres',\n" +
-//                "}\n" +
-//                "\n" +
-//                "postgresql::server::db { 'liquibase':\n" +
-//                "  user     => '"+ getDatabaseUsername()+"',\n" +
-//                "  password => '"+ getDatabasePassword()+"'\n" +
-//                "}\n";
-//    }
 }

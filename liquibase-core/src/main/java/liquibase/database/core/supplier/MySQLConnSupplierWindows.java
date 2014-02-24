@@ -1,11 +1,8 @@
 package liquibase.database.core.supplier;
 
-import liquibase.sdk.TemplateService;
-
-import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class MySQLConnSupplierWindows extends MySQLConnSupplier {
 
@@ -28,15 +25,8 @@ public class MySQLConnSupplierWindows extends MySQLConnSupplier {
     }
 
     @Override
-    public String getVagrantBaseBoxName() {
-        return VAGRANT_BOX_NAME_WINDOWS_STANDARD;
-    }
-
-    @Override
-    public String getPuppetInit(String box) throws IOException {
-        Map<String, Object> context = new HashMap<String, Object>();
-        context.put("supplier", this);
-        return TemplateService.getInstance().output("liquibase/sdk/vagrant/supplier/mysql/mysql-windows.puppet.vm", context);
+    public ConfigTemplate getPuppetTemplate(Map<String, Object> context) {
+        return new ConfigTemplate("liquibase/sdk/vagrant/supplier/mysql/mysql-windows.puppet.vm", context);
     }
 
     @Override
@@ -48,12 +38,11 @@ public class MySQLConnSupplierWindows extends MySQLConnSupplier {
     }
 
     @Override
-    public void writeConfigFiles(File configDir) throws IOException {
-        super.writeConfigFiles(configDir);
+    public Set<ConfigTemplate> generateConfigFiles(Map<String, Object> context) throws IOException {
+        Set<ConfigTemplate> configTemplates = super.generateConfigFiles(context);
 
-        Map<String, Object> context = new HashMap<String, Object>();
-        context.put("supplier", this);
+        configTemplates.add(new ConfigTemplate("liquibase/sdk/vagrant/supplier/mysql/mysql.ini.vm", context));
 
-        TemplateService.getInstance().write("liquibase/sdk/vagrant/supplier/mysql/mysql.ini.vm", new File(configDir, "mysql.ini"), context);
+        return configTemplates;
     }
 }

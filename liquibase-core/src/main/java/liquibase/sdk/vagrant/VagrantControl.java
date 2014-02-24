@@ -146,11 +146,7 @@ public class VagrantControl {
         Set<String> propertiesFiles = new HashSet<String>();
         for (ConnectionSupplier connectionSupplier : databases) {
             String fileName;
-            if (databases.size() == 1) {
-                fileName = "liquibase."+vagrantInfo.boxDir.getName()+".properties";
-            } else {
-                fileName = "liquibase."+vagrantInfo.boxDir.getName()+"-"+connectionSupplier.getDatabaseShortName()+".properties";
-            }
+            fileName = "liquibase."+vagrantInfo.boxDir.getName()+"-"+connectionSupplier.getDatabaseShortName()+".properties";
 
             String propertiesFile =
                     "### Connection Property File For Vagrant Box '"+ vagrantInfo.boxName+"'\n"+
@@ -318,9 +314,12 @@ public class VagrantControl {
         Set<String> puppetBlocks = new HashSet<String>();
 
         for (ConnectionSupplier config : databases) {
-            String thisInit = config.getPuppetInit(vagrantInfo.boxName);
+            Map<String, Object> context = new HashMap<String, Object>();
+            context.put("supplier", config);
+
+            ConnectionSupplier.ConfigTemplate thisInit = config.getPuppetTemplate(context);
             if (thisInit != null) {
-                puppetBlocks.add(thisInit);
+                puppetBlocks.add(thisInit.output());
             }
         }
 
@@ -409,8 +408,19 @@ public class VagrantControl {
     }
 
     private void writeConfigFiles(VagrantInfo vagrantInfo, Collection<ConnectionSupplier> databases) throws IOException {
+        Map<String, Object> context = new HashMap<String, Object>();
         for (ConnectionSupplier config : databases) {
-                config.writeConfigFiles(new File(vagrantInfo.boxDir, "modules/conf"));
+            context.put("supplier", config);
+
+            Set<ConnectionSupplier.ConfigTemplate> configTemplates = config.generateConfigFiles(context);
+            if (configTemplates != null) {
+                for (ConnectionSupplier.ConfigTemplate configTemplate : configTemplates) {
+                    File outputFile = new File(vagrantInfo.boxDir+"/modules/conf/" + config.getDatabaseShortName(), configTemplate.getOutputFileName());
+                    outputFile.getParentFile().mkdirs();
+
+                    configTemplate.write(outputFile);
+                }
+            }
         }
     }
 
