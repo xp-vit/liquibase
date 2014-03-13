@@ -12,16 +12,6 @@ public class MSSQLConnSupplier extends ConnectionSupplier {
         return "mssql";
     }
 
-    @Override
-    public String getConfigurationName() {
-        return CONFIG_NAME_STANDARD;
-    }
-
-    @Override
-    public String getVagrantBaseBoxName() {
-        return VAGRANT_BOX_NAME_WINDOWS_STANDARD;
-    }
-
     public String getInstanceName() {
         return "MSSQLSERVER";
     }
@@ -34,6 +24,11 @@ public class MSSQLConnSupplier extends ConnectionSupplier {
     @Override
     public String getJdbcUrl() {
         return "jdbc:sqlserver://"+ getIpAddress() +":1433;databaseName="+getPrimaryCatalog();
+    }
+
+    @Override
+    public String getOs() {
+        return OS_WINDOWS;
     }
 
     @Override
