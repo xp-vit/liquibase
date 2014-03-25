@@ -4,7 +4,7 @@
 
     <groupId>com.datical.testing</groupId>
     <artifactId>liquibase-parent</artifactId>
-    <version>3.1.31</version>
+    <version>3.1.32-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Liquibase Parent Configuration</name>
