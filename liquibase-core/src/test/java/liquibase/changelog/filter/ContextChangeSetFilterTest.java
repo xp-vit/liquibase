@@ -68,6 +68,14 @@ public class ContextChangeSetFilterTest {
         assertTrue(filter.accepts(new ChangeSet(null, null, false, false, null, null, null, null)).isAccepted());
     }
 
+    @Test public void reallyNullContexts(){
+      ContextChangeSetFilter filter = new ContextChangeSetFilter(null);
+
+      assertTrue(filter.accepts(new ChangeSet(null, null, false, false, null, "test1", null, null)).isAccepted());
+      assertTrue(filter.accepts(new ChangeSet(null, null, false, false, null, "test1, test2", null, null)).isAccepted());
+      assertTrue(filter.accepts(new ChangeSet(null, null, false, false, null, null, null, null)).isAccepted());
+    }
+    
     @Test
     public void singleContexts() {
         ContextChangeSetFilter filter = new ContextChangeSetFilter(new Contexts("TEST1"));
