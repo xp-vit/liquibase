@@ -1,7 +1,12 @@
 package liquibase.util;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.util.Enumeration;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.zip.ZipInputStream;
 
 public class FileUtil {
     /**
@@ -68,4 +73,44 @@ public class FileUtil {
         }
     }
 
+    /**
+     * Unzips the given zip file and returns a File object corresponding to the root directory.
+     * The returned directory is a temporary directory that will be deleted on application exit.
+     */
+    public static File unzip(File zipFile) throws IOException {
+        File tempDir = File.createTempFile("liquibase-unzip", ".dir");
+        tempDir.delete();
+        tempDir.mkdir();
+
+        JarFile jarFile = new JarFile(zipFile);
+        try {
+            Enumeration<JarEntry> entries = jarFile.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                File entryFile = new File(tempDir, entry.getName());
+                if (!entry.isDirectory()) {
+                    entryFile.getParentFile().mkdirs();
+                    FileOutputStream out = new FileOutputStream(entryFile);
+
+                    byte[] buf = new byte[1024];
+                    int len;
+                    InputStream inputStream = jarFile.getInputStream(entry);
+                    while ((len = inputStream.read(buf)) > 0) {
+                        if (!zipFile.exists()) {
+                            zipFile.getParentFile().mkdirs();
+                        }
+                        out.write(buf, 0, len);
+                    }
+                    inputStream.close();
+                    out.close();
+                }
+            }
+
+            FileUtil.forceDeleteOnExit(tempDir);
+        } finally {
+            jarFile.close();
+        }
+
+        return tempDir;
+    }
 }
